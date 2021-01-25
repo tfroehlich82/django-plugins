@@ -2,26 +2,39 @@ from __future__ import absolute_import
 
 from optparse import make_option
 
-from django.core.management.base import NoArgsCommand
+from django import VERSION as django_version
+
+from django.core.management.base import BaseCommand
 from django.utils import six
 
 from djangoplugins.point import PluginMount
-from djangoplugins.utils import get_plugin_name, load_plugins
+from djangoplugins.utils import get_plugin_name, load_plugins, db_table_exists
 from djangoplugins.models import Plugin, PluginPoint, REMOVED, ENABLED
 
 
-class Command(NoArgsCommand):
-    option_list = NoArgsCommand.option_list + (
-        make_option('--delete', action='store_true', dest='delete',
-                    help='delete the REMOVED Plugin and PluginPoint '
-                    'instances. '),
-    )
+class Command(BaseCommand):
     help = ("Syncs the registered plugins and plugin points with the model "
             "versions.")
+    if django_version <= (1, 8):
+        option_list = BaseCommand.option_list + (
+            make_option('--delete',
+                        action='store_true',
+                        dest='delete',
+                        default=False,
+                        help='delete the REMOVED Plugin and PluginPoint '
+                        'instances.'),
+        )
 
     requires_model_validation = True
 
-    def handle_noargs(self, **options):
+    def add_arguments(self, parser):
+        parser.add_argument('--delete',
+            action='store_true',
+            dest='delete',
+            help='delete the REMOVED Plugin and PluginPoint '
+            'instances. ')
+
+    def handle(self, *args, **options):
         sync = SyncPlugins(options.get('delete'), options.get('verbosity'))
         sync.all()
 
@@ -119,4 +132,14 @@ class SyncPlugins():
         """
         Synchronize all registered plugins and plugin points to database.
         """
+        # Django >= 1.9 changed something with the migration logic causing
+        # plugins to be executed before the corresponding database tables
+        # exist. This method will only return something if the database
+        # tables have already been created.
+        # XXX: I don't fully understand the issue and there should be
+        # another way but this appears to work fine.
+        if django_version >= (1, 9) and (
+                not db_table_exists(Plugin._meta.db_table) or
+                not db_table_exists(PluginPoint._meta.db_table)):
+            return
         self.points()

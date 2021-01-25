@@ -24,12 +24,13 @@ Source code:
 long_description += read_docs('CHANGES.rst')
 
 setup(name='django-plugins',
-      version='0.3.x',
+      version='0.3.0',
       author='Lion Krischer',
       author_email='lion.krischer@googlemail.com',
       packages=find_packages(exclude=['sample-project']),
       install_requires=[
-          'django>=1.7',
+          'django>=1.6',
+          'django-dirtyfields<1.3',
       ],
       url='https://github.com/krischer/django-plugins',
       download_url='http://pypi.python.org/pypi/django-plugins',
@@ -51,8 +52,8 @@ setup(name='django-plugins',
           'Programming Language :: Python :: 2',
           'Programming Language :: Python :: 2.7',
           'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.2',
           'Programming Language :: Python :: 3.3',
           'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5',
           'Topic :: Software Development :: Libraries :: Python Modules',
       ])

@@ -1,10 +1,8 @@
 from __future__ import absolute_import
 
-from os.path import join, exists, dirname
-
+from django.db import connection
 from django.conf import settings
-
-from django.conf.urls import include, patterns
+from django.conf.urls import include, url
 
 from importlib import import_module
 
@@ -32,22 +30,38 @@ def include_plugins(point, pattern=r'{plugin}/', urls='urls'):
     for plugin in point.get_plugins():
         if hasattr(plugin, urls) and hasattr(plugin, 'name'):
             _urls = getattr(plugin, urls)
-            for url in _urls:
-                url.default_args['plugin'] = plugin.name
-            pluginurls.append((
+            for _url in _urls:
+                _url.default_args['plugin'] = plugin.name
+            pluginurls.append(url(
                 pattern.format(plugin=plugin.name),
                 include(_urls)
             ))
-    return include(patterns('', *pluginurls))
+    return include(pluginurls)
+
+
+def import_app(app_name):
+    try:
+        mod = import_module(app_name)
+    except ImportError:  # Maybe it's AppConfig
+        parts = app_name.split('.')
+        tmp_app, app_cfg_name = '.'.join(parts[:-1]), parts[-1]
+        try:
+            tmp_app = import_module(tmp_app)
+        except ImportError:
+            raise
+        mod = getattr(tmp_app, app_cfg_name).name
+        mod = import_module(mod)
+
+    return mod
 
 
 def load_plugins():
     for app in settings.INSTALLED_APPS:
         try:
             import_module('%s.plugins' % app)
-        except ImportError as e:
-            # If module exists but still can't be imported it means, that there
-            # is error inside plugins module.
-            mod = import_module(app)
-            if exists(join(dirname(mod.__file__), 'plugins.py')):
-                raise e
+        except ImportError:
+            import_app(app)
+
+
+def db_table_exists(table_name):
+    return table_name in connection.introspection.table_names()

@@ -221,6 +221,30 @@ ORM::
             'plugins': MyPluginPoint.get_plugins_qs().order_by('name')
         }
 
+
+
+Signals
+-------
+
+There are two registered signals with Django that you might use for hooking
+event handlers in case a Django plugin gets disabled or enabled at a certain
+point. See the following code snippet for an example usage:
+
+.. code-block:: python
+
+    from django.dispatch.dispatcher import receiver
+    from djangoplugins.signals import django_plugin_disabled, django_plugin_enabled
+
+    @receiver(django_plugin_enabled)
+    def _django_plugin_enabled(sender, plugin, **kwargs):
+        enable_plugin(plugin)
+
+        @receiver(django_plugin_disabled)
+        def _django_plugin_disabled(sender, plugin, **kwargs):
+            disable_plugin(plugin)
+
+
+
 Model fields
 ------------
 
@@ -377,7 +401,7 @@ Urls
 is example how this can be done::
 
     from django.conf.urls.defaults import patterns
-    from plugins.utils import include_plugins
+    from djangoplugins.utils import include_plugins
     from my_app.plugin_points import MyPluginPoint
 
     urlpatterns = patterns('wora.views',
